@@ -1,0 +1,24 @@
+# Dependencies
+node_modules/
+.venv/
+
+# Environment files
+.env
+**/.env
+
+# Build output
+client/dist/
+
+# Database (regenerated from R02NEW.xlsx via npm run init-db)
+server/data/*.db
+server/data/*.db-journal
+
+# Editor / OS
+.vscode/
+.idea/
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log
+npm-debug.log*

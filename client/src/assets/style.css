@@ -1,0 +1,117 @@
+html, body, #app {
+    margin: 0;
+    padding: 0;
+    height: 100%;
+    font-family: 'Segoe UI', 'Microsoft JhengHei', 'PingFang TC', sans-serif;
+    color: #1d1d1f;
+    background: #f5f7fa;
+    font-size: 18px;
+}
+
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-end;
+    margin-bottom: 20px;
+}
+
+.page-title {
+    margin: 0;
+    font-size: 30px;
+    font-weight: 700;
+}
+
+.page-subtitle {
+    margin-top: 4px;
+    font-size: 17px;
+    color: #6b7280;
+}
+
+.stat-card {
+    min-width: 160px;
+    text-align: left;
+}
+
+.stat-card .label {
+    font-size: 15px;
+    font-weight: 700;
+    color: #6b7280;
+    text-transform: uppercase;
+}
+
+.stat-card .value {
+    font-size: 34px;
+    font-weight: 800;
+    color: #1f2937;
+}
+
+.long-text {
+    white-space: pre-wrap;
+    word-break: break-word;
+    line-height: 1.6;
+    color: #1f2937;
+    font-size: 17px;
+}
+
+.el-table {
+    font-size: 17px !important;
+}
+
+.el-descriptions {
+    font-size: 17px !important;
+}
+
+.el-descriptions__label,
+.el-descriptions__content {
+    font-size: 17px !important;
+}
+
+.el-tag {
+    font-size: 15px !important;
+}
+
+.el-tag--large {
+    font-size: 18px !important;
+}
+
+.el-button {
+    font-size: 17px !important;
+}
+
+.el-button--small {
+    font-size: 15px !important;
+}
+
+.el-input__inner,
+.el-select__wrapper,
+.el-select__placeholder,
+.el-select-dropdown__item {
+    font-size: 17px !important;
+}
+
+.el-checkbox__label {
+    font-size: 17px !important;
+}
+
+.el-menu-item {
+    font-size: 18px !important;
+}
+
+.el-pagination {
+    font-size: 17px !important;
+}
+
+.el-table th.el-table__cell {
+    background: #f3f4f6 !important;
+    color: #000 !important;
+    font-weight: 700;
+}
+
+.el-table td.el-table__cell {
+    color: #000 !important;
+}
+
+.el-table td.el-table__cell .el-button.is-link,
+.el-table td.el-table__cell .el-link {
+    color: #2563eb !important;
+}

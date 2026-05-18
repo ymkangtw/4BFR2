@@ -5,6 +5,7 @@ import { ElMessage } from 'element-plus';
 import { exportExcel } from '@/util/exportExcel.js';
 import R02Service from '@/service/r02.service.js';
 import CategoryService from '@/service/category.service.js';
+import { setItemListSequence } from '@/store/itemListContext.js';
 
 defineOptions({ name: 'ItemList' });
 
@@ -89,6 +90,7 @@ async function load() {
         } else {
             items.value = await r02Service.getBy(param);
         }
+        setItemListSequence(items.value.map(it => it.itemid));
     } finally {
         loading.value = false;
     }
@@ -108,16 +110,28 @@ function onRowClick(row) {
     router.push({ name: 'detail', params: { itemid: row.itemid } });
 }
 
+const exportDialog = ref(false);
+const exportMode = ref('visible');
+
 function handleExport() {
     if (items.value.length === 0) {
         ElMessage.warning('沒有資料可匯出');
         return;
     }
-    const cols = COLUMN_OPTIONS.filter(c => visibleColumns.value.includes(c.key));
+    exportMode.value = 'visible';
+    exportDialog.value = true;
+}
+
+function confirmExport() {
+    const cols = exportMode.value === 'all'
+        ? [...COLUMN_OPTIONS]
+        : COLUMN_OPTIONS.filter(c => visibleColumns.value.includes(c.key));
+
     if (cols.length === 0) {
         ElMessage.warning('未選擇任何欄位，請至「顯示欄位」勾選後再匯出');
         return;
     }
+
     const d = new Date();
     const ymd = `${d.getFullYear()}${String(d.getMonth() + 1).padStart(2, '0')}${String(d.getDate()).padStart(2, '0')}`;
     exportExcel({
@@ -126,7 +140,8 @@ function handleExport() {
         filename: `4BFR2-項目清單-${ymd}.xlsx`,
         sheetName: '項目清單'
     });
-    ElMessage.success(`已匯出 ${items.value.length} 筆，共 ${cols.length} 個欄位`);
+    ElMessage.success(`已匯出 ${items.value.length} 筆，共 ${cols.length} 個欄位（${exportMode.value === 'all' ? '全部' : '僅顯示'}）`);
+    exportDialog.value = false;
 }
 
 function statusTagType(s) {
@@ -249,5 +264,53 @@ function statusTagType(s) {
                 </el-table-column>
             </el-table>
         </el-card>
+
+        <el-dialog v-model="exportDialog" title="匯出 Excel" width="520px" class="export-dialog">
+            <div style="padding: 8px 12px 4px;">
+                <div style="font-size: 19px; color: #4b5563; margin-bottom: 24px;">請選擇匯出的欄位範圍：</div>
+                <el-radio-group v-model="exportMode" class="export-radio-group">
+                    <el-radio value="visible">僅匯出顯示欄位</el-radio>
+                    <el-radio value="all">匯出所有欄位（19 欄）</el-radio>
+                </el-radio-group>
+            </div>
+            <template #footer>
+                <div style="display: flex; gap: 12px; justify-content: flex-end; padding: 8px 12px 4px;">
+                    <el-button size="large" @click="exportDialog = false">取消</el-button>
+                    <el-button size="large" type="primary" @click="confirmExport">確定匯出</el-button>
+                </div>
+            </template>
+        </el-dialog>
     </div>
 </template>
+
+<style>
+.export-dialog .el-dialog__header {
+    padding: 20px 24px 12px;
+    margin-right: 0;
+}
+.export-dialog .el-dialog__header .el-dialog__title {
+    font-size: 22px;
+    font-weight: 700;
+}
+.export-dialog .el-dialog__body {
+    padding: 16px 24px 20px;
+}
+.export-dialog .el-dialog__footer {
+    padding: 16px 24px 20px;
+    border-top: 1px solid #e5e7eb;
+}
+.export-radio-group {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 20px;
+    padding-left: 8px;
+}
+.export-radio-group .el-radio__label {
+    font-size: 19px !important;
+}
+.export-radio-group .el-radio__inner {
+    width: 18px;
+    height: 18px;
+}
+</style>

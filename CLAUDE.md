@@ -60,11 +60,15 @@
         ├── service/
         │   ├── http.js        # axios 實例，response 錯誤 ElMessage Toast
         │   ├── r02.service.js
-        │   └── category.service.js
+        │   ├── category.service.js
+        │   ├── ollama.service.js
+        │   └── admin.service.js  # 資料維護寫入 API 封裝
         ├── views/
         │   ├── Overview.vue   # 統計總覽（狀態/區域/系統類別三區塊長條圖）
         │   ├── ItemList.vue   # 主列表＋篩選（FilterBar 內聯，未獨立元件）
-        │   └── ItemDetail.vue # 單筆明細（el-descriptions + long-text class）
+        │   ├── ItemDetail.vue # 單筆明細（el-descriptions + long-text class）
+        │   ├── OllamaModels.vue # 本機 Ollama 模型清單
+        │   └── AdminEdit.vue  # 資料維護（r02 / category 編輯）
         ├── components/        # 目前無共用元件（FilterBar 內嵌於 ItemList.vue）
         └── assets/
             └── style.css      # 全域樣式（page-header、long-text、el-table 配色）
@@ -150,8 +154,17 @@ LEFT JOIN category c ON r.categoryname = c.categoryname;
 | GET | `/api/r02/stats` | 統計總覽（依 status / categoryname / area 分組計數） |
 | GET | `/api/r02/:itemid` | 取得單筆完整內容（含 `categorycode`） |
 | GET | `/api/category` | 取得全部系統類別 |
+| GET | `/api/ollama/models` | 取得本機 Ollama 已下載模型清單（後端 proxy `OLLAMA_URL/api/tags`） |
+| GET | `/api/r02/distinct/:field` | r02 欄位的去重值清單（白名單欄位 `status`/`area`/`areaname`/`applicant`/`class`），編輯下拉用 |
+| POST | `/api/r02` | 新增 r02 項目（必填 `itemid`/`prjname`/`itemname`，`itemid` 唯一檢查；Raw SQL `INSERT`） |
+| PUT | `/api/r02/:itemid` | 更新 r02 項目（白名單欄位，禁改主鍵 `itemid`；Raw SQL `UPDATE`） |
+| DELETE | `/api/r02/:itemid` | 刪除 r02 項目（若有其他項目 `combineid` 引用本筆，回 400） |
+| POST | `/api/category` | 新增 category（`code`、`categoryname` 不可重複） |
+| PUT | `/api/category/:id` | 更新 category；若 `categoryname` 改名，於 transaction 內 `UPDATE r02 SET categoryname` 同步，回傳 `{category, syncedR02}` |
+| DELETE | `/api/category/:id` | 刪除 category（若 r02 仍引用此 categoryname，回 400） |
+| GET | `/api/category/:id/refcount` | 查詢類別目前被 r02 引用筆數（前端改名前用於提示同步筆數） |
 
-> 路由註冊順序：`/stats` 必須在 `/:itemid` 之前註冊，否則 `stats` 會被當成 itemid 處理。見 `server/routes/r02.route.js`。
+> 路由註冊順序：`/stats`、`/getby`、`/distinct/:field` 必須在 `/:itemid` 之前註冊，否則會被當成 itemid 處理。見 `server/routes/r02.route.js`。
 
 ### `getby` 白名單欄位
 
@@ -180,6 +193,8 @@ LEFT JOIN category c ON r.categoryname = c.categoryname;
 | Overview | `/` | 統計卡片（總筆數、各狀態筆數、合併比例）+ 分組長條圖（依系統類別） |
 | Item List | `/list` | 主列表 + 多條件篩選 + el-table（show-overflow-tooltip） |
 | Item Detail | `/detail/:itemid` | 單筆完整內容（多長文欄位以 `el-descriptions` 顯示，含換行） |
+| Ollama Models | `/ollama` | 本機 Ollama 已下載模型清單（按鈕觸發載入；表格顯示模型名稱、參數量、量化、家族、格式、大小、修改時間、digest） |
+| Admin Edit | `/admin` | r02 / category 資料維護（el-tabs 切換） |
 
 ### Overview
 
@@ -210,6 +225,48 @@ LEFT JOIN category c ON r.categoryname = c.categoryname;
 - 第一段 el-descriptions 三欄式顯示一般欄位（含 combineid 連結、系統類別僅顯示 `categoryname` 不加代碼徽章、建議方式跨三欄）
 - 第二段 el-descriptions 一欄式顯示 6 個長文欄位：`spec`、`description`、`purpose`、`workcontent`、`benefit`、`note`，套 `.long-text` class（`white-space: pre-wrap`）保留 Excel 內 `\r\n` 換行
 - `combineid` 點擊以 `router.push` 跳至對應項目，`watch(route.params.itemid)` 觸發重新載入
+
+### Ollama Models
+
+- 路由 `/ollama`，元件 `client/src/views/OllamaModels.vue`
+- 標題列右側按鈕「載入模型清單」（首次點擊觸發載入；之後變「重新載入」）
+- 透過 `OllamaService` 打 `GET /api/ollama/models`，後端再 proxy 至 `OLLAMA_URL/api/tags`
+- el-table 8 欄：模型名稱（`name`）、參數量（`details.parameter_size`）、量化（`details.quantization_level`）、模型家族（`details.family`）、格式（`details.format`）、大小（byte 轉 GB / MB）、修改時間（YYYY-MM-DD HH:mm）、Digest（前 12 碼，monospace）
+- 後端連不上 Ollama 時 503 + 錯誤訊息，前端 `service/http.js` 攔截器以 `ElMessage` Toast 顯示
+
+#### Ollama 連線注意事項
+
+- 後端用 Node 原生 `fetch` 打 Ollama，timeout 5 秒（`AbortSignal.timeout(5000)`），不依賴 LangChain
+- LangChain JS（`@langchain/ollama`）只包裝推論端點（`/api/chat`、`/api/generate`、`/api/embeddings`），**不包含模型清單 API**；列模型必須直接打 `/api/tags`
+- **Ollama daemon 必須先啟動**：執行 `ollama serve`、開 Ollama 桌面 app，或讓系統服務常駐。daemon 沒跑時 `/api/tags` 連不上
+- **`OLLAMA_MODELS` 環境變數**：若模型放在非預設位置（預設 `%USERPROFILE%\.ollama\models`），daemon 必須在啟動時帶這個 env 才看得到。例如本機模型在 `D:\Model\ollama` 時：
+  ```powershell
+  [System.Environment]::SetEnvironmentVariable('OLLAMA_MODELS', 'D:\Model\ollama', 'User')
+  ```
+  此設定僅對「之後新啟動」的 process 生效；既已開啟的 PowerShell 視窗看不到，必須關掉重開（或在當前視窗手動 `$env:OLLAMA_MODELS = 'D:\Model\ollama'` 後再 `ollama serve`）
+- **驗證**：`curl http://localhost:11434/api/tags` 應回傳 `{"models":[ ... ]}`；若回 `{"models":[]}` 但 `ollama list` 有東西，代表 daemon 與 CLI 讀取的 `OLLAMA_MODELS` 不一致
+
+### Admin Edit
+
+- 路由 `/admin`，元件 `client/src/views/AdminEdit.vue`
+- 頁面頂部顯示 init-db 重建警告（el-alert，type=warning），提醒「執行 `npm run init-db` 會重建資料表並清除所有編輯內容」
+- 採 `el-tabs type="border-card"` 切換兩個子分頁：
+  - **r02 項目 Tab**：
+    - 篩選列：關鍵字 + 系統類別下拉 + 查詢 / 重置 / 新增項目按鈕（CSS Grid）
+    - 顯示欄位勾選按鈕（`el-popover` + `el-checkbox-group` 全選 + indeterminate），localStorage key `r02-admin-columns`（與 ItemList 的 `r02-itemlist-columns` 分開），預設顯示 6 個關鍵欄位：`itemid`/`prjname`/`itemname`/`categoryname`/`area`/`status`
+    - el-table 操作欄含「編輯 / 刪除」兩個 link 按鈕
+    - 編輯/新增採 **el-drawer（rtl，720px）**，分四個區段：基本資訊 / 分類與狀態 / 規格資訊 / 長文描述
+    - 必填欄位：`itemid`、`prjname`、`itemname`（前端 `ElMessage.warning` 提示，後端再次驗證）
+    - 編輯時 `itemid` disabled 不可改；下拉欄位（`applicant`/`status`/`area`/`areaname`/`class`）採 `el-select` 並 `filterable allow-create`，options 從 `/api/r02/distinct/:field` 載入
+    - `categoryname` 下拉取自 `/api/category`
+    - `combineid` 採 `el-autocomplete`，從目前載入的 items 過濾建議（不打額外 API）
+    - 寫入後局部更新 `items` 陣列（新增 `unshift`、編輯 `splice 同 index`、刪除 `splice`），不重新呼叫 `/api/r02`
+  - **category 類別 Tab**：
+    - 右上「新增類別」按鈕
+    - el-table 三欄：代碼 / 類別名稱 / 操作
+    - 編輯/新增 el-drawer 寬 480px，僅兩個必填欄位
+    - **改 `categoryname` 同步機制**：儲存前先打 `/api/category/:id/refcount`，若 r02 引用 > 0 顯示 ElMessageBox 警告同步筆數，使用者確認後送 PUT；後端在 transaction 內 `UPDATE r02 SET categoryname` 並回傳 `syncedR02` 筆數；前端再 local 把 `items` 內舊 categoryname 替換成新值
+    - 刪除前後端各做一次「r02 是否仍引用」檢查，引用中時阻擋並顯示筆數
 
 ## 開發規範（沿用全域 CLAUDE.md）
 

@@ -1,7 +1,8 @@
 <script setup>
-import { ref, watch, onMounted } from 'vue';
+import { ref, computed, watch, onMounted } from 'vue';
 import { useRoute, useRouter } from 'vue-router';
 import R02Service from '@/service/r02.service.js';
+import { itemListContext } from '@/store/itemListContext.js';
 
 const route = useRoute();
 const router = useRouter();
@@ -9,6 +10,26 @@ const r02Service = new R02Service();
 
 const loading = ref(false);
 const item = ref(null);
+
+const currentIndex = computed(() =>
+    itemListContext.itemids.indexOf(route.params.itemid)
+);
+const total = computed(() => itemListContext.itemids.length);
+const hasSequence = computed(() => total.value > 0 && currentIndex.value !== -1);
+const hasPrev = computed(() => hasSequence.value && currentIndex.value > 0);
+const hasNext = computed(() => hasSequence.value && currentIndex.value < total.value - 1);
+
+function goPrev() {
+    if (!hasPrev.value) return;
+    const id = itemListContext.itemids[currentIndex.value - 1];
+    router.push({ name: 'detail', params: { itemid: id } });
+}
+
+function goNext() {
+    if (!hasNext.value) return;
+    const id = itemListContext.itemids[currentIndex.value + 1];
+    router.push({ name: 'detail', params: { itemid: id } });
+}
 
 async function load(itemid) {
     loading.value = true;
@@ -35,9 +56,23 @@ function statusTagType(s) {
 
 <template>
     <div v-loading="loading" element-loading-text="載入中...">
+        <div class="detail-nav-bar">
+            <el-button :icon="'ArrowLeft'" @click="router.push('/list')">返回清單</el-button>
+            <div class="detail-nav-right">
+                <span class="detail-nav-counter" :class="{ 'is-empty': !hasSequence }">
+                    <template v-if="hasSequence">{{ currentIndex + 1 }} / {{ total }}</template>
+                    <template v-else>無搜尋序列</template>
+                </span>
+                <el-button :icon="'ArrowLeft'" :disabled="!hasPrev" @click="goPrev">上一筆</el-button>
+                <el-button :disabled="!hasNext" @click="goNext">
+                    下一筆
+                    <el-icon style="margin-left: 4px;"><ArrowRight /></el-icon>
+                </el-button>
+            </div>
+        </div>
+
         <div class="page-header">
             <div>
-                <el-button :icon="'ArrowLeft'" @click="router.push('/list')" style="margin-bottom: 8px;">返回清單</el-button>
                 <h2 class="page-title">
                     {{ item?.itemid }}
                     <span style="margin-left: 8px; font-weight: 400; color: #6b7280; font-size: 20px;">{{ item?.itemname }}</span>
@@ -95,3 +130,28 @@ function statusTagType(s) {
         </el-card>
     </div>
 </template>
+
+<style scoped>
+.detail-nav-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 16px;
+}
+.detail-nav-right {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+}
+.detail-nav-counter {
+    font-size: 17px;
+    color: #1f2937;
+    font-weight: 600;
+    padding: 0 8px;
+}
+.detail-nav-counter.is-empty {
+    color: #9ca3af;
+    font-weight: 400;
+    font-size: 15px;
+}
+</style>

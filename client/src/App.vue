@@ -34,10 +34,6 @@ function toggleCollapse() {
                     <el-icon><Search /></el-icon>
                     <template #title>項目清單</template>
                 </el-menu-item>
-                <el-menu-item index="/ollama">
-                    <el-icon><Cpu /></el-icon>
-                    <template #title>Ollama 模型</template>
-                </el-menu-item>
                 <el-menu-item index="/admin">
                     <el-icon><Edit /></el-icon>
                     <template #title>資料維護</template>

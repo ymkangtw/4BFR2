@@ -22,17 +22,17 @@
 │   ├── data/r02.db          # SQLite 檔（init-db.js 產出）
 │   ├── models/              # sequelize 連線管理
 │   ├── routes/              # *.route.js 由 routes/index.js 自動載入
-│   ├── ctrl/                # controller (getAll, getBy, ..., ollama proxy)
+│   ├── ctrl/                # controller (getAll, getBy, ...)
 │   └── scripts/init-db.js   # Excel→SQLite 匯入腳本
 └── client/
     ├── vite.config.js       # alias '@' = src，dev proxy '/api' → :3000
     └── src/
         ├── App.vue          # 左側導覽（可收合）+ <router-view/>
         ├── main.js
-        ├── views/           # Overview / ItemList / ItemDetail / OllamaModels / AdminEdit
-        ├── service/         # axios 實例 + r02 / category / ollama / admin service
+        ├── views/           # Overview / ItemList / ItemDetail / AdminEdit
+        ├── service/         # axios 實例 + r02 / category / admin service
         ├── util/exportExcel.js # 通用 xlsx-js-style 匯出（標題粗體置中、自動欄寬列高）
-        ├── router/          # / → Overview, /list, /detail/:itemid, /ollama, /admin
+        ├── router/          # / → Overview, /list, /detail/:itemid, /admin
         └── assets/style.css # 全域樣式（page-header, long-text 換行保留）
 ```
 
@@ -82,7 +82,6 @@
 | GET | `/api/r02/stats` | 統計總覽（status / categoryname / area 分組） |
 | GET | `/api/r02/:itemid` | 單筆明細 |
 | GET | `/api/category` | 全部系統類別 |
-| GET | `/api/ollama/models` | 本機 Ollama 已下載模型清單（後端 proxy `OLLAMA_URL/api/tags`） |
 | GET | `/api/r02/distinct/:field` | 取得 r02 欄位的去重值清單（白名單 `status`/`area`/`areaname`/`applicant`/`class`），編輯下拉用 |
 | POST | `/api/r02` | 新增 r02 項目（必填 `itemid`/`prjname`/`itemname`，`itemid` 唯一） |
 | PUT | `/api/r02/:itemid` | 更新 r02 項目（白名單欄位，禁改 `itemid`） |
@@ -101,7 +100,6 @@
 | 總覽 | `/` | Total 大數字 + 狀態 / 區域 / 系統類別 三區塊比例條 |
 | 項目清單 | `/list` | 5 欄位 FilterBar + el-table 顯示 r02 全部 19 欄位（不分頁，全部 490 筆），上方「顯示欄位」按鈕可勾選顯示欄位（含全選，localStorage 持久化），合併至編號為連結，「匯出 Excel」依目前勾選欄位輸出 .xlsx |
 | 項目明細 | `/detail/:itemid` | el-descriptions 顯示一般欄位 + 6 個長文欄位（保留 `\r\n` 換行），合併至連結可跳轉 |
-| Ollama 模型 | `/ollama` | 本機 Ollama 已下載模型清單，按鈕觸發載入；表格顯示模型名稱、參數量、量化、家族、格式、大小、修改時間、digest |
 | 資料維護 | `/admin` | r02 / category 編輯介面（el-tabs 切換）。r02 支援關鍵字 + 系統類別篩選、欄位顯示勾選（localStorage key `r02-admin-columns`，與項目清單分開）、新增/編輯/刪除（el-drawer 720px，必填 `itemid`/`prjname`/`itemname`，編輯時 `itemid` 不可改，刪除前檢查 `combineid` 引用）。category 可新增/編輯/刪除（el-drawer 480px，改 `categoryname` 會在 transaction 內同步更新所有引用的 r02；刪除前檢查 r02 引用）。頁面上方含 init-db 重建警告條 |
 
 ## 安裝與啟動
@@ -178,35 +176,4 @@ WHERE a.status = '已合併';
 ```
 DB_PATH=./data/r02.db
 APP_PORT=3000
-OLLAMA_URL=http://localhost:11434
 ```
-
-## Ollama 連線
-
-`/ollama` 頁面透過後端 proxy `GET /api/ollama/models` → `OLLAMA_URL/api/tags` 取得本機已下載的模型清單。
-
-### 啟動 Ollama daemon
-
-頁面只能讀到 daemon 已知的模型，所以必須先讓 daemon 跑起來。任選一種：
-
-- 開啟 Ollama 桌面 app（系統匣常駐）
-- PowerShell 執行 `ollama serve`（會佔住該終端機）
-
-### 模型存放路徑（OLLAMA_MODELS）
-
-若模型不在預設位置 `%USERPROFILE%\.ollama\models`，必須讓 daemon 啟動時看到 `OLLAMA_MODELS` 環境變數：
-
-```powershell
-# 持久化到使用者層級（之後新開的視窗 / 服務都會繼承）
-[System.Environment]::SetEnvironmentVariable('OLLAMA_MODELS', 'D:\Model\ollama', 'User')
-```
-
-注意：**Windows 環境變數變更只對「之後新啟動」的 process 生效**。已開啟的 PowerShell 視窗看不到新值，必須關掉重開（或在當前視窗手動 `$env:OLLAMA_MODELS = 'D:\Model\ollama'` 後再 `ollama serve`）。
-
-### 驗證
-
-```powershell
-curl http://localhost:11434/api/tags
-```
-
-正常會回 `{"models":[ ... ]}`。若回 `{"models":[]}` 但 `ollama list` 顯示有模型，代表 daemon 與 CLI 讀到的 `OLLAMA_MODELS` 不一致。

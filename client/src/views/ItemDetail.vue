@@ -72,21 +72,20 @@ function statusTagType(s) {
         </div>
 
         <div class="page-header">
-            <div>
-                <h2 class="page-title">
-                    {{ item?.itemid }}
-                    <span style="margin-left: 8px; font-weight: 400; color: #6b7280; font-size: 20px;">{{ item?.itemname }}</span>
-                </h2>
-                <div class="page-subtitle">{{ item?.prjname }}</div>
-            </div>
-            <div v-if="item">
-                <el-tag :type="statusTagType(item.status)" size="large">{{ item.status || '-' }}</el-tag>
-            </div>
+            <h2 class="page-title">
+                {{ item?.itemid }}
+                <span style="margin-left: 8px; font-weight: 600; color: #6b7280; font-size: 26px;">{{ item?.itemname }}</span>
+            </h2>
         </div>
 
         <el-card v-if="item" shadow="never">
             <el-descriptions :column="3" border size="default">
+                <el-descriptions-item label="專案名稱" :span="3">{{ item.prjname || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="項目名稱" :span="3">{{ item.itemname || '-' }}</el-descriptions-item>
                 <el-descriptions-item label="項目編號">{{ item.itemid }}</el-descriptions-item>
+                <el-descriptions-item label="狀態">
+                    <el-tag :type="statusTagType(item.status)">{{ item.status || '-' }}</el-tag>
+                </el-descriptions-item>
                 <el-descriptions-item label="申請人">{{ item.applicant || '-' }}</el-descriptions-item>
                 <el-descriptions-item label="合併至編號">
                     <el-link
@@ -104,7 +103,7 @@ function statusTagType(s) {
                 <el-descriptions-item label="分類">{{ item.class || '-' }}</el-descriptions-item>
                 <el-descriptions-item label="設備重量">{{ item.weight || '-' }}</el-descriptions-item>
                 <el-descriptions-item label="設計供應">{{ item.supply || '-' }}</el-descriptions-item>
-                <el-descriptions-item label="建議方式" :span="3">{{ item.implement || '-' }}</el-descriptions-item>
+                <el-descriptions-item label="建議方式" :span="2">{{ item.implement || '-' }}</el-descriptions-item>
             </el-descriptions>
 
             <el-descriptions :column="1" border size="default" style="margin-top: 16px;">

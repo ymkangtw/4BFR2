@@ -2,6 +2,11 @@
 node_modules/
 .venv/
 
+# package-lock 不入版控：本機為 Windows，鎖定的平台原生套件（如 rollup）
+# 會導致 Render(Linux) 安裝缺對應 binary（npm/cli#4828），故交由佈署端重新解析
+package-lock.json
+**/package-lock.json
+
 # Environment files
 .env
 **/.env

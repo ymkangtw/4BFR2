@@ -23,7 +23,7 @@ app.use(function (err, req, res, next) {
     res.status(500).json({ message: '伺服器內部錯誤' });
 });
 
-const PORT = process.env.APP_PORT || 3000;
+const PORT = process.env.PORT || process.env.APP_PORT || 3000;
 app.listen(PORT, function () {
     console.log(`success listen...${PORT}`);
 });

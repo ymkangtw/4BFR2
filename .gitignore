@@ -9,9 +9,12 @@ node_modules/
 # Build output
 client/dist/
 
-# Database (regenerated from R02NEW.xlsx via npm run init-db)
+# Database（佈署沿用本地 r02.db，故放行主檔；journal/wal 仍忽略）
 server/data/*.db
+!server/data/r02.db
 server/data/*.db-journal
+server/data/*.db-wal
+server/data/*.db-shm
 
 # Editor / OS
 .vscode/

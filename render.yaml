@@ -1,0 +1,19 @@
+# Render Blueprint — 4BFR2（方案 B：沿用 repo 內的 server/data/r02.db，不掛持久磁碟）
+# 用法：Render → New → Blueprint → 選此 repo，會自動依本檔建立服務。
+# 注意（方案 B 特性）：可查詢也可編輯，但每次重新佈署/重啟，資料會還原成 commit 的 r02.db。
+services:
+  - type: web
+    name: 4bfr2
+    runtime: node
+    region: singapore        # 離台灣最近，延遲較低（可改 oregon/frankfurt 等）
+    plan: free               # 免費方案；閒置會休眠，冷啟動約 30 秒
+    branch: main
+    autoDeploy: true         # push 到 main 後自動重新佈署
+    # 強制從原始碼編譯 sqlite3，對齊 Render 的 glibc，避免 prebuilt binary 版本不合
+    buildCommand: "npm install --build-from-source=sqlite3 && npm run build"
+    startCommand: "npm start"
+    healthCheckPath: /
+    envVars:
+      # 釘住 Node 版本，避免 Render 預設的最新版造成原生模組相容問題
+      - key: NODE_VERSION
+        value: 20.18.0

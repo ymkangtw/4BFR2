@@ -196,10 +196,10 @@ function statusTagType(s) {
                     搜尋結果：<span style="color: #1f2937; font-weight: 600;">{{ items.length }}</span> 筆
                 </div>
                 <div style="display: flex; gap: 8px;">
-                <el-button type="success" :icon="'Download'" size="small" @click="handleExport">匯出 Excel</el-button>
+                <el-button type="success" :icon="'Download'" @click="handleExport">匯出 Excel</el-button>
                 <el-popover placement="bottom-end" :width="240" trigger="click">
                     <template #reference>
-                        <el-button :icon="'Setting'" size="small">顯示欄位</el-button>
+                        <el-button :icon="'Setting'">顯示欄位</el-button>
                     </template>
                     <div style="border-bottom: 1px solid #ebeef5; padding-bottom: 6px; margin-bottom: 6px;">
                         <el-checkbox v-model="checkAll" :indeterminate="checkIndeterminate">全選</el-checkbox>
